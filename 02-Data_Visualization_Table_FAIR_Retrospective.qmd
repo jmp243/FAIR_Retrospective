@@ -53,7 +53,7 @@ field_table <- field_table %>%
   ungroup()
 ```
 
-Treemap 
+Treemap graphic using the Okabe Ito color scheme
 ```{r}
 okabe_ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2") 
 
@@ -61,6 +61,7 @@ library(showtext)
 font_add(family = "Arial", regular = "Arial.ttf")
 showtext_auto()
 
+library(treemapify)
 ggplot(field_table, aes(area = doi_count, fill = Domain, label = label_text, subgroup = Domain)) +
   geom_treemap() +
   geom_treemap_text(colour = "black", place = "center", reflow = TRUE, size = 14,
@@ -73,6 +74,7 @@ ggplot(field_table, aes(area = doi_count, fill = Domain, label = label_text, sub
 #### Table of countries ####
 # list of countries
 Logic for the countries count. Generated with the assistance of Google ai mode on July 1 2026.
+Run 01-Data_Cleaning_FAIR first to create the list of countries
 ```{r}
 DATE_MIN   <- as.Date("2016-03-15")
 DATE_MAX   <- as.Date("2026-03-16")
