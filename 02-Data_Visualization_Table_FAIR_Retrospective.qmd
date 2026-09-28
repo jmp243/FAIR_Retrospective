@@ -4,14 +4,14 @@ format: html
 editor: visual
 ---
 
-Read in data
+# Read in data
 Please run 01-Data_Cleaning_FAIR_Retrospective first
 ```{r}
 library(readr)
 library(tidyverse)
 alex_doi_new1 <- read_csv("output_data/alex_doi_new1.csv")
 ```
-
+# Summary Cart of DOI
 Simple Summary Chart for the Numbers of DOI in the Domain, Field, and Subfield
 ```{r}
 # Summary table grouped by the unique DOI
@@ -27,7 +27,7 @@ domain_summary <- alex_doi_new1 %>%
 # Print the resulting table
 print(domain_summary)
 ```
-
+# Field Tables
 ```{r}
 # generate a table with count of the top Field
 # Read the Google AI summary on how to add numbers for top field on 8/31 
@@ -53,31 +53,72 @@ field_table <- field_table %>%
   ungroup()
 ```
 
-Treemap graphic using the Okabe Ito color scheme
+# Treemap graphic using the Okabe Ito color scheme
 ```{r}
-okabe_ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2") 
+okabe_ito <- c("#009E73", "#F0E442", "#E69F00", "#56B4E9", "#0072B2") 
 
 library(showtext)
 font_add(family = "Arial", regular = "Arial.ttf")
 showtext_auto()
 
+```
+With a horizontal legend.
+Used Claude Sonnet 5 on 9/28/26 to move the legend to horizontal.
+```{r}
+library(forcats)
+
+field_table <- field_table %>%
+  mutate(Domain = fct_reorder(Domain, doi_count, .fun = sum, .desc = TRUE))
+
+domain_order <- field_table %>%
+  group_by(Domain) %>%
+  summarise(total = sum(doi_count)) %>%
+  arrange(desc(total)) %>%
+  pull(Domain)
+
+field_table$Domain <- factor(field_table$Domain, levels = domain_order)
+
 library(treemapify)
 ggplot(field_table, aes(area = doi_count, fill = Domain, label = label_text, subgroup = Domain)) +
   geom_treemap() +
   geom_treemap_text(colour = "black", place = "center", reflow = TRUE, size = 14,
-                     family = "Arial", min.size =5) +
+                    family = "Arial", min.size = 5) +
   geom_treemap_subgroup_border(colour = "darkgrey", size = 0.5) +
   scale_fill_manual(values = okabe_ito) +
-  labs(title = "Distribution of Publications by Domain and Field") 
+  labs(title = "Distribution of Publications by Domain and Field") +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.title = element_blank()
+  )
+
+```
+To make it higher resolution
+```{r}
+# p <- ggplot(field_table, aes(area = doi_count, fill = Domain, label = label_text, subgroup = Domain)) +
+#   geom_treemap() +
+#   geom_treemap_text(colour = "black", place = "center", reflow = TRUE, size = 14,
+#                     family = "Arial", min.size = 5) +
+#   geom_treemap_subgroup_border(colour = "darkgrey", size = 0.5) +
+#   scale_fill_manual(values = okabe_ito) +
+#   labs(title = "Distribution of Publications by Domain and Field") +
+#   theme(
+#     legend.position = "bottom",
+#     legend.direction = "horizontal",
+#     legend.title = element_blank()
+#   )
+
+# ggsave("visual_output/treemap.png", plot = p, width = 10, height = 7, units = "in", dpi = 300)
 ```
 
-#### Table of countries ####
-# list of countries
+
+# Table of countries 
+## list of countries
 Logic for the countries count. Generated with the assistance of Google ai mode on July 1 2026.
 Run 01-Data_Cleaning_FAIR first to create the list of countries
 ```{r}
 DATE_MIN   <- as.Date("2016-03-15")
-DATE_MAX   <- as.Date("2026-03-16")
+DATE_MAX   <- as.Date("2026-03-15")
 
 code_col <- intersect(c("code", "iso2", "iso2c", "country_code"), names(country_dict))
 name_col <- intersect(c("name", "country_name", "country", "label"),  names(country_dict))
@@ -199,9 +240,8 @@ Google ai prompt. dataframe A and dataframe b compare the different responses in
 # response code
 # # Example if columns are shuffled
 # library(dplyr)
-# 
-# df_B <- df_B %>% 
-#   rename(col1 = slight_diff_name1, col2 = slight_diff_name2) %>% 
+# df_B <- df_B %>%
+#   rename(col1 = slight_diff_name1, col2 = slight_diff_name2) %>%
 #   select(colnames(df_A))
 
 Use library(waldo) to find missing subfields
