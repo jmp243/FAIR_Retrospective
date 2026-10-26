@@ -63,7 +63,7 @@ showtext_auto()
 
 ```
 With a horizontal legend.
-Used Claude Sonnet 5 on 9/28/26 to move the legend to horizontal.
+Used Claude Sonnet 5.5 Medium on 9/28/26 to move the legend to horizontal.
 ```{r}
 library(forcats)
 
@@ -93,6 +93,7 @@ ggplot(field_table, aes(area = doi_count, fill = Domain, label = label_text, sub
   )
 
 ```
+
 To make it higher resolution
 ```{r}
 # p <- ggplot(field_table, aes(area = doi_count, fill = Domain, label = label_text, subgroup = Domain)) +
@@ -236,7 +237,7 @@ subfields_df <- subfields_df %>%
 ```
 Google prompt "can you compare two variables in two different datasets" on 8/24/2026
 
-Google ai prompt. dataframe A and dataframe b compare the different responses in the same columns (column names are slightly different) in R (8/24/2026)
+Google AI Mode. dataframe A and dataframe b compare the different responses in the same columns (column names are slightly different) in R (8/24/2026)
 # response code
 # # Example if columns are shuffled
 # library(dplyr)
