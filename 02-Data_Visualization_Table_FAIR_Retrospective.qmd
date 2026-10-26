@@ -11,12 +11,67 @@ library(readr)
 library(tidyverse)
 alex_doi_new1 <- read_csv("output_data/alex_doi_new1.csv")
 ```
-# Summary Cart of DOI
+
+# Country Code analysis
+This code chunk is redundant if you ran 01-Data_Cleaning_FAIR_Retrospective.R recently and it is still cached in memory.
+```{r}
+#### Country Codes ####
+# code modified from google ai search on July 1, 2026
+# pivot the data frame longer
+country_wide <- alex_doi_new1 %>%
+  select(.row_id, authorships.countries) %>%
+  # separate multiple rows
+  separate_rows(authorships.countries, sep = "\\|") %>%
+  mutate(
+    country = str_trim(authorships.countries),
+    country = toupper(country),         
+    country = na_if(country, "")        # drop NA's
+  ) %>%
+  filter(!is.na(country)) %>%
+  distinct(.row_id, country) %>%        
+  mutate(has_country = 1L) %>%          
+  pivot_wider(
+    names_from = country,
+    values_from = has_country,
+    values_fill = 0
+  )
+
+library(countrycode)
+# create a country code dictionary
+country_codes <- names(country_wide)
+
+# remove non‑country columns like ".row_id"
+country_codes <- country_codes[country_codes != ".row_id"]
+
+# create a country code dictionary using  ISO‑3166‑1 country code 
+country_dict <- data.frame(
+  code = country_codes,
+  country = countrycode(country_codes, origin = "iso2c", destination = "country.name")
+)
+
+country_dict$country[country_dict$code == "XK"] <- "Kosovo" # add Kosovo
+
+# Join back to original if you want the rest of the columns:
+alex_doi_new_wide <- alex_doi_new1 %>%
+  left_join(country_wide, by = ".row_id") %>%
+  select(-.row_id)
+
+```
+
+OPTIONAL
+```{r}
+# write to csv
+write.csv(alex_doi_new_wide, file = "output_data/alex_doi_new_wide.csv")
+
+```
+
+
+# Summary Chart of DOI
 Simple Summary Chart for the Numbers of DOI in the Domain, Field, and Subfield
 ```{r}
 # Summary table grouped by the unique DOI
 domain_summary <- alex_doi_new1 %>%
-  filter(Domain !="") %>% 
+  filter(Domain !="") %>%
   group_by(Domain) %>%
   summarise(
     unique_dois_count = n_distinct(doi, na.rm = TRUE),
@@ -26,6 +81,7 @@ domain_summary <- alex_doi_new1 %>%
 
 # Print the resulting table
 print(domain_summary)
+
 ```
 # Field Tables
 ```{r}
@@ -168,73 +224,62 @@ countries_doi_count <- df_long  %>%
 
 
 #### Finding the Subfields not represented ####
-We have coverage in all domains and fields. and 210 out of 252 subfields in OpenAlex.
+We have coverage in all domains and fields. and 214 out of 252 subfields in OpenAlex.
 claude.ai prompt for Sonnet 5 Medium on Aug. 24, 2026 - I asked create a API pull in OpenAlex using R to get subfields data. There are 252 subfields. The Subfields endpoint is at `api.openalex.org/subfields`.
 What are they?
 I modified the response code to...
+
 ```{r}
 library(httr2)
 library(dplyr)
-library(purrr)
-library(tibble)
+library(tidyr)
 
-# Pull all subfields via cursor pagination (per_page max = 200,
-# and there are 252 subfields, so this will take 2 pages)
-get_openalex_subfields <- function(mailto = "jungmee.park@wichita.edu") {
-  
-  base_url <- "https://api.openalex.org/subfields"
-  cursor   <- "*"
-  all_results <- list()
-  
-  repeat {
-    resp <- request(base_url) %>%
-      req_url_query(
-        per_page = 200,
-        cursor   = cursor,
-        mailto   = mailto          
-      ) %>%
-      req_perform()
-    
-    parsed <- resp_body_json(resp, simplifyVector = FALSE)
-    
-    all_results <- c(all_results, parsed$results)
-    
-    cursor <- parsed$meta$next_cursor
-    if (is.null(cursor) || length(parsed$results) == 0) break
-  }
-  
-  all_results
+subfields_df <- request("https://api.openalex.org/subfields") %>%
+  req_url_query(per_page = 200, mailto = "EMIL@email.com") %>%
+  req_perform() %>%
+  resp_body_json(simplifyVector = TRUE) %>%
+  .$results %>%
+  transmute(
+    subfield_id    = id,
+    subfield_name  = display_name,
+    field_id       = field$id,
+    field_name     = field$display_name,
+    domain_id      = domain$id,
+    domain_name    = domain$display_name,
+    works_count,
+    cited_by_count
+  ) %>%
+  mutate(across(ends_with("_id"), ~ sub(".*/", "", .x))) %>%
+  arrange(domain_name, field_name, subfield_name)
+```
+
+
+```{r}
+get_page <- function(p) {
+  request("https://api.openalex.org/subfields") %>%
+    req_url_query(per_page = 200, page = p, mailto = "EMIL@email.com") %>%
+    req_perform() %>%
+    resp_body_json(simplifyVector = TRUE) %>%
+    .$results
 }
 
-subfields_raw <- get_openalex_subfields(mailto = "jungmee.park@wichita.edu")
-length(subfields_raw)   # should be 252
-
-# Flatten into a tidy data frame: subfield -> its parent field -> its parent domain
-subfields_df <- map_dfr(subfields_raw, function(x) {
-  tibble(
-    subfield_id    = x$id,
-    subfield_name  = x$display_name,
-    field_id       = x$field$id,
-    field_name     = x$field$display_name,
-    domain_id      = x$domain$id,
-    domain_name    = x$domain$display_name,
-    works_count    = x$works_count %||% NA_integer_,
-    cited_by_count = x$cited_by_count %||% NA_integer_
-  )
-})
-
-# Strip the "https://openalex.org/" prefix off the IDs so you're left with the
-# bare numeric/alpha IDs, matching the style you used earlier (e.g. "2718")
-subfields_df <- subfields_df %>%
-  mutate(
-    subfield_id = sub("https://openalex.org/subfields/", "", subfield_id),
-    field_id    = sub("https://openalex.org/fields/",    "", field_id),
-    domain_id   = sub("https://openalex.org/domains/",   "", domain_id)
+subfields_df <- bind_rows(get_page(1), get_page(2)) %>%
+  transmute(
+    subfield_id    = id,
+    subfield_name  = display_name,
+    field_id       = field$id,
+    field_name     = field$display_name,
+    domain_id      = domain$id,
+    domain_name    = domain$display_name,
+    works_count,
+    cited_by_count
   ) %>%
+  mutate(across(ends_with("_id"), ~ sub(".*/", "", .x))) %>%
   arrange(domain_name, field_name, subfield_name)
 
-
+nrow(subfields_df)   # should be 252
 ```
+
 Google prompt "can you compare two variables in two different datasets" on 8/24/2026
 
 Google AI Mode. dataframe A and dataframe b compare the different responses in the same columns (column names are slightly different) in R (8/24/2026)
@@ -260,7 +305,7 @@ unshown_subfields <- setdiff(subfields_df_A, subfields_df_B)
 ```
 
 
-response modified to
+response modified to be shown as a table
 ```{r}
 unknown_subfields <- subfields_df |> 
   filter(Subfield %in% unshown_subfields)
