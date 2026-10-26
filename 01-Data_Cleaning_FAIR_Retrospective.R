@@ -27,12 +27,13 @@ alex_doi <- citing_works %>%
   unique()
 
 # filter out works that were published before 2015
-alex_doi_new <- alex_doi %>% 
+# due to metadata errors in OpenAlex
+alex_doi_new <- alex_doi %>%
   filter(publication_year > 2015)
 
 #### Deduplication Steps ####
 # create a dups dataframe for titles that appear more than once
-dups <- alex_doi_new %>%
+dups <- alex_doi %>%
   group_by(title) %>%
   filter(n() > 1) %>%
   ungroup()
@@ -47,7 +48,7 @@ dups_api <- alex_doi %>%
   filter(has_cites) %>%       
   ungroup()
 
-# remove has cites variable
+# remove has cites Binary variable that was created as a test
 dups_api <- dups_api %>% 
   select(-has_cites)
 
@@ -66,7 +67,7 @@ works_csv_August7_sourceID$doi <- works_csv_August7_sourceID$DOI
 
 # remove duplicated columns
 works_csv_August7 <- works_csv_August7_sourceID %>% 
-  select(-c(Title, DOI, Year, `Citation count` ))
+  select(-c(Title, DOI, Year, `Citation count` )) 
 
 # left_join this to the alex_doi_new
 alex_doi_new1 <- alex_doi_new %>% 
@@ -138,50 +139,6 @@ alex_doi_new_wide <- alex_doi_new1 %>%
 # write to csv
 write.csv(alex_doi_new_wide, file = "output_data/alex_doi_new_wide.csv")
 
-#### Table of countries ####
-# list of countries
-# alex_doi_new_wide
-DATE_MIN   <- as.Date("2016-03-15")
-DATE_MAX   <- as.Date("2026-03-16")
-EXCL_DOI   <- "10.1038/sdata.2016.18"
 
-code_col <- intersect(c("code", "iso2", "iso2c", "country_code"), names(country_dict))
-name_col <- intersect(c("name", "country_name", "country", "label"),  names(country_dict))
 
-if (length(code_col) == 0) stop("country_dict must have a code column.")
-country_dict_std <- if (length(name_col) == 0) {
-  country_dict %>% rename(code = !!code_col[1]) %>% mutate(name = code)
-} else {
-  country_dict %>% rename(code = !!code_col[1], name = !!name_col[1])
-}
 
-country_codes <- names(alex_doi_new_wide)[str_detect(names(alex_doi_new_wide), "^[A-Z]{2}$")]
-
-df_long <- alex_doi_new_wide %>%
-  filter(publication_date >= DATE_MIN, publication_date <= DATE_MAX,
-         doi_clean != EXCL_DOI) %>%
-  mutate(publication_year = as.integer(publication_year)) %>%
-  filter(!is.na(publication_year), publication_year > 2015) %>%
-  select(publication_year, doi_clean, all_of(country_codes)) %>%
-  pivot_longer(cols = all_of(country_codes),
-               names_to = "country_code", values_to = "value") %>%
-  filter(!is.na(value), value > 0) %>%
-  left_join(country_dict_std, by = c("country_code" = "code")) %>%
-  mutate(country_name = coalesce(name, country_code)) %>%
-  select(publication_year, doi_clean, country_code, country_name, value)
-
-summary_full <- df_long %>%
-  group_by(publication_year, country_code, country_name) %>%
-  summarise(count = n_distinct(doi_clean), .groups = "drop") %>%
-  group_by(publication_year) %>%
-  mutate(year_total = sum(count)) %>%
-  ungroup()
-
-all_countries <- sort(unique(summary_full$country_name))
-
-# Table for COuntries count by unique DOI's
-countries_doi_count <- df_long  %>%
-  group_by(country_name) %>%
-  summarise(unique_items = n_distinct(doi_clean), .groups = 'drop')
-
-#### Calculations for Field and Subfields ####
