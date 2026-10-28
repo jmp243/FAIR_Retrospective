@@ -1,6 +1,6 @@
 # FAIR Retrospective
 Repository for 10 year FAIR Retrospective Paper written by Marla I Hertz, Kelsey Badger, Lena Bohman, Matthew Harp, Mikala Narlock, Amy Nurnberger, and Jung Mee Park. 
-Submit all questions about the data analysis and code to Jung Mee Park.
+Submit all questions about the data analysis and code to Jung Mee Park (jungmee.park@wichita.edu).
 
 Original Raw data was from OpenAlex when we looked for citations that cited "The FAIR Guiding Principles for scientific data management and stewardship" (March 2016) by Wilkinson et al (DOI: 10.1038/sdata.2016.18). 
 
