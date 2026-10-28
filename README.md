@@ -1,4 +1,4 @@
-# FAIR_Retrospective
+# FAIR Retrospective
 Repository for 10 year FAIR Retrospective Paper written by Marla I Hertz, Kelsey Badger, Lena Bohman, Matthew Harp, Mikala Narlock, Amy Nurnberger, and Jung Mee Park. 
 Submit all questions about the data analysis and code to Jung Mee Park.
 
