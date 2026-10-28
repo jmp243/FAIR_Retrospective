@@ -7,8 +7,13 @@ Original Raw data was from OpenAlex when we looked for citations that cited "The
 ## Software requirements
 R and RStudio, using libraries tidyverse, treemapify, openalexR, readr, httr2, dplyr, tidyr, countrycode, waldo, forcats, showtext. 
 
+## Raw data
+The raw data is stored on Zenodo. Dimensions data is available via subscription at https://app.dimensions.ai
 ## Scripts
 Run the 01-Data_Cleaning_FAIR_Retrospective.R file first and save the data outputs to a drive called /output_data.
 
 Then run 02-Data_Visualization_Table_FAIR_Retrospective.qmd
+
+## Helpful tips
+The file paths will differ based on where you store the data files.
 
